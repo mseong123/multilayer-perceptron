@@ -54,7 +54,7 @@ class DenseLayer():
         '''sigmoid function. returns shape (sample_size,)'''
         return 1 / (1 + np.exp(-z))
     
-    def _sigmoid_derivative(self, y_predict:np.ndarray) -> np.ndarray:
+    def sigmoid_derivative(self, y_predict:np.ndarray) -> np.ndarray:
         return y_predict * (1 - y_predict)
 
     def _softmax(self, z) -> np.ndarray:
@@ -73,13 +73,8 @@ class DenseLayer():
         elif self._activation == "softmax":
             return self._softmax(z) 
 
-    def error_delta(self, y:np.ndarray) -> np.ndarray:
-        '''return error of layer'''
-        y_predict:np.ndarray = self.y_predict()
-        if self.activation == "softmax":
-            return y_predict[:,0] - y
-        if self.activation == "sigmoid":
-            return (y_predict - y) * self._sigmoid_derivative(self.y_predict())
+    
+    
 
 
 

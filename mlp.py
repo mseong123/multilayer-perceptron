@@ -25,7 +25,7 @@ class MLPClassifier():
                 continue
             else:
                 # Gaussian normal distribution of mean 0 and std deviation 1
-                layer.bias = rng.normal()
+                layer.bias = rng.normal(0, 1, layer.size)
 
     def _normalize(self, x:np.ndarray) -> np.ndarray:
         '''convert each value to normalised Z score with mean of 0 and std deviation of 1'''
@@ -46,22 +46,6 @@ class MLPClassifier():
         indices = np.arange(len(y))
         rng.shuffle(indices)
         return (y[indices], X[indices])
-
-    def gradient(self, y:np.ndarray, y_predict:np.ndarray,X:np.ndarray,\
-                  sgd:bool) ->tuple[np.ndarray]:
-        '''calculate gradient of weight and bias'''
-        #dL/dy_predict = - ((y/y_predict) - (1-y/1-y_predict))
-        # dy_predict/dz = y_predict * (1 - y_predict)
-        # dz/dw
-        # gradient of loss w.r.t. dL/dw = (dL/dy_predict) x (dy_predict / dz) x (dz / dw)
-        # simplify = ((y_predict - y) * X) / sample_size.
-        # bias is the same except for dz/db = 1 hence (y_predict - y) / sample size
-        if sgd is False:
-            gradient_weight:np.ndarray = np.dot(X.T, y_predict - y) / len(y_predict)
-        else:
-            gradient_weight:np.ndarray = X * (y_predict - y)
-        gradient_bias:np.ndarray = np.mean(y_predict - y)
-        return (gradient_weight, gradient_bias)
     
     def _feedforward(self, x_shuffled:np.ndarray) -> None:
         y_predict:np.ndarray = np.array([])
@@ -72,15 +56,20 @@ class MLPClassifier():
     def _sigmoid_derivative(self, y_predict:np.ndarray) -> np.ndarray:
         return y_predict * (1 - y_predict)
 
-    def _backpropagate(self, y_batch:np.ndarray) -> None:
+    def _backpropagate(self, y_batch:np.ndarray, learning_rate:float) -> None:
         layer_error_delta:np.ndarray = np.array([])
         for layer in reversed(list(enumerate(self._layers))):
             if layer.activation == "softmax":
-                layer.weight -= layer.weight.T.dot(layer.error_delta(y_batch))
-                layer_error_delta = layer.error_delta(y_batch) 
+                layer_error:np.ndarray = layer.y_predict() - y_batch
+                layer.weight -= layer.input_matrix.T.dot(layer_error) * learning_rate
+                layer.bias -= np.mean(layer_error, axis=0) * learning_rate
+                layer_error_delta = layer_error.dot(layer.weight.T)
             elif layer.activation == "sigmoid":
-                layer.weight -= layer.weight.T.dot(layer_error_delta)
-                layer_error_delta = layer.error_delta()
+                layer.weight -= layer.input_matrix.T.dot(layer_error_delta) * learning_rate
+                layer.bias -= np.mean(layer_error_delta, axis=0) * learning_rate
+                layer_error_delta = layer_error_delta.dot(layer.weight.T)
+            else:
+                continue
 
         
 
@@ -102,13 +91,10 @@ class MLPClassifier():
                 x_batch:np.ndarray = x_shuffled[start_index:end_index]
                 y_batch:np.ndarray = y_shuffled[start_index:end_index]
                 self._feedforward(x_batch)
-                self._backpropagate(y_batch)
+                self._backpropagate(y_batch, learning_rate)
                 # mini batch SGD backpropagate
-                gradient_weight, gradient_bias = self.gradient(y_batch, y_predict, X_batch, False)
-                self._weight -= self._learning_rate * gradient_weight
-                self._bias -= self._learning_rate * gradient_bias
                 start_index = end_index
-                end_index = start_index + self._batch_size
+                end_index = start_index + batch_size
 
 
 
