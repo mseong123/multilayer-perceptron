@@ -2,9 +2,11 @@
 
 import pandas as pd
 import numpy as np
+import layers
+import mlp
 
 def main()->None:
-    pass
+    layers.DenseLayer(size=5)
 
 if __name__ == "__main__":
     main()
