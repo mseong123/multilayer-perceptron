@@ -44,10 +44,9 @@ def main()->None:
         randomised_df:pd.DataFrame = pd.DataFrame(randomized_selection(df.values.tolist(), sys.argv[2]))
     else:
         randomised_df:pd.DataFrame = pd.DataFrame(randomized_selection(df.values.tolist()))
-    randomised_df.to_csv("hello.csv")
-    training_set, validation_set = stratify(df)
-    pd.DataFrame(training_set).to_csv("data_training.csv", index=False, header=False)
-    pd.DataFrame(validation_set).to_csv("data_test.csv", index=False, header=False)
+    training_set, validation_set = stratify(randomised_df)
+    pd.DataFrame(training_set).to_csv("data_train.csv", index=False, header=None)
+    pd.DataFrame(validation_set).to_csv("data_test.csv", index=False, header=None)
 
 
 if __name__ == "__main__":
