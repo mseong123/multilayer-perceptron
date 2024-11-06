@@ -39,10 +39,12 @@ class MLPClassifier():
     def _binary_cross_entropy_loss(self, y:np.ndarray, y_predict:np.ndarray)->np.ndarray:
         '''calculate and return loss value'''
         epsilon = 1e-10
-        # shape is (size of sample,)
-        # add epsilon to prevent log(0) which is undefined
-        return np.mean(-((y * np.log(y_predict + epsilon)) + \
-                        ((1 - y) * (np.log(1 - y_predict + epsilon)))))
+        # total weight in network
+        w:float = 0
+        for layer in self.layers:
+            w += np.sum(layer.weight)
+        # shape is (size of sample,). Add epsilon to prevent log(0) which is undefined
+        return np.mean(-((y * np.log(y_predict + epsilon)) + ((1 - y) * (np.log(1 - y_predict + epsilon)))))
     
     def _accuracy_score(self, y:np.ndarray, y_predict:np.ndarray):
         '''calculate number of classification that's correct divide by length of sample'''
@@ -108,6 +110,20 @@ class MLPClassifier():
     def layers(self) -> np.ndarray:
         '''getter for layers'''
         return self._layers
+    
+    @layers.setter
+    def layers(self, layers) -> None:
+        '''setter for layers'''
+        self._layers = layers
+
+    def predict(self, y_valid:np.ndarray, x_valid:np.ndarray) -> tuple:
+        x_valid = self._normalize(x_valid)
+        y_predict_valid = self._feedforward(x_valid)
+        loss_valid:np.float64 = self._binary_cross_entropy_loss(y_valid, y_predict_valid)
+        accuracy_valid:np.float64 = self._accuracy_score(y_valid, y_predict_valid)
+        error_valid:np.float64 = 1 - accuracy_valid
+        return (loss_valid, accuracy_valid, error_valid)
+
  
     def fit(self, x_train:np.ndarray, x_valid:np.ndarray, y_train:np.ndarray, y_valid:np.ndarray, seed:int=42, _lambda:float=3, early_stopping=False, learning_rate:float=0.01, batch_size:int=30, epoch:int=10)->tuple[list,list]:
         '''train model based on hyperparams'''

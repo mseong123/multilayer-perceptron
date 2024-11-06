@@ -21,7 +21,7 @@ def preprocess(df_train:pd.DataFrame, df_valid:pd.DataFrame) -> tuple:
 
 def plot_metrics(loss_train:np.ndarray, loss_valid:np.ndarray, accuracy_train:np.ndarray, accuracy_valid:np.ndarray) -> None:
     '''plotting function matplotlib'''
-    fig, ax = plt.subplots(1,2, layout='constrained')
+    _, ax = plt.subplots(1,2, layout='constrained')
     ax[0].plot(loss_train, color="blue", label="training data loss")
     ax[0].plot(loss_valid, color="red", label="validation data loss")
     ax[0].set_title("Loss Metric")
@@ -42,8 +42,10 @@ def main()->None:
     y_train, y_valid, df_train, df_valid = preprocess(df_train, df_valid)
     # initialise model, first layer based on features in dataset
     model:mlp.MLPClassifier = mlp.MLPClassifier([layers.DenseLayer(size=len(df_train.columns)),layers.DenseLayer(size=20, activation="sigmoid"),layers.DenseLayer(size=10, activation="sigmoid"),layers.DenseLayer(size=2, activation="softmax")])
-    loss_train, loss_valid, accuracy_train, accuracy_valid = model.fit(df_train.values, df_valid.values, y_train, y_valid, batch_size=16, epoch=30)
+    loss_train, loss_valid, accuracy_train, accuracy_valid = model.fit(df_train.values, df_valid.values, y_train, y_valid, batch_size=16, epoch=30, _lambda=3)
     plot_metrics(loss_train, loss_valid, accuracy_train, accuracy_valid)
+    print("saving model './layer.npz' to disk...")
+    np.savez("layer.npz", layers=model.layers)
 
 
 if __name__ == "__main__":
