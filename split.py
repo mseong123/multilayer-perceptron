@@ -4,7 +4,7 @@ import random
 import pandas as pd
 import numpy as np
 
-def randomized_selection(arr:list, seed:str="42") -> list:
+def randomized_selection(arr:list, seed:int=42) -> list:
     '''Seed to allow same randomisation when sampling. Default of 42 if no seed specified'''
     randomized_list:list = []
     random.seed(seed)
@@ -41,7 +41,7 @@ def main()->None:
     except Exception as e:
         print(f"Error:{e}")
     if (len(sys.argv) == 3):
-        randomised_df:pd.DataFrame = pd.DataFrame(randomized_selection(df.values.tolist(), sys.argv[2]))
+        randomised_df:pd.DataFrame = pd.DataFrame(randomized_selection(df.values.tolist(), int(sys.argv[2])))
     else:
         randomised_df:pd.DataFrame = pd.DataFrame(randomized_selection(df.values.tolist()))
     training_set, validation_set = stratify(randomised_df)

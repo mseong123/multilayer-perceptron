@@ -65,12 +65,13 @@ class DenseLayer():
 
     def y_predict(self) -> np.ndarray:
         '''return z after activation function'''
-        z:np.ndarray = np.dot(self._input_matrix, self.weight) + self.bias
         if len(self._weight) == 0:
             return self.input_matrix
         elif self._activation == "sigmoid":
+            z:np.ndarray = np.dot(self._input_matrix, self.weight) + self.bias
             return self._sigmoid(z)
         elif self._activation == "softmax":
+            z:np.ndarray = np.dot(self._input_matrix, self.weight) + self.bias
             return self._softmax(z) 
 
     
