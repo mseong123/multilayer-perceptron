@@ -5,7 +5,7 @@ class MLPClassifier():
     '''Based on Tensorflow Sequential model'''
     def __init__ (self, layers=None, seed:int=42):
         if layers is None:
-            layers = []
+            self._layers = []
         else:
             self._layers=layers
             self._init_weight(seed)
