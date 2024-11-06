@@ -42,6 +42,8 @@ class MLPClassifier():
         return np.mean(-((y * np.log(y_predict + epsilon)) + \
                         ((1 - y) * (np.log(1 - y_predict + epsilon)))))
     
+    def _accuracy_score(self, y:np.ndarray, y_predict:np.ndarray):
+        pass
 
     def _shuffle(self, y:np.ndarray, x:np.ndarray, seed:int) -> None:
         '''shuffle label and data in place according to seed'''
@@ -81,7 +83,9 @@ class MLPClassifier():
         '''getter for layers'''
         return self._layers
     
-    def fit(self, x_train:np.ndarray, x_valid:np.ndarray, y_train:np.ndarray, y_valid:np.ndarray, seed:int=42, early_stopping=False, learning_rate:float=0.01, batch_size:int=8, epoch:int=84)->tuple[list,list]:
+
+    
+    def fit(self, x_train:np.ndarray, x_valid:np.ndarray, y_train:np.ndarray, y_valid:np.ndarray, seed:int=42, early_stopping=False, learning_rate:float=0.01, batch_size:int=50, epoch:int=1)->tuple[list,list]:
         '''train model based on hyperparams'''
         print(f"x_train shape : {x_train.shape}")
         print(f"x_valid shape : {x_valid.shape}")
@@ -102,6 +106,7 @@ class MLPClassifier():
                 end_index = start_index + batch_size
             y_predict_train = self._feedforward(x_train)
             y_predict_valid = self._feedforward(x_valid)
+            self._accuracy_score(y_train, y_predict_train)
             print(f"epoch {i+1}/{epoch} - loss: {self._binary_cross_entropy_loss(y_train, y_predict_train)} \
                   - val_loss: {self._binary_cross_entropy_loss(y_valid, y_predict_valid)}")
             
