@@ -12,6 +12,7 @@ class MLPClassifier():
             self._init_bias(seed)
 
     def _init_weight(self, seed:int) -> None:
+        ''' init weight based on seed, shape is (input_size, size)'''
         rng = np.random.default_rng(seed)
         for idx, layer in enumerate(self._layers):
             if idx == 0:
@@ -21,6 +22,7 @@ class MLPClassifier():
                 layer.weight = rng.normal(0, 1, tuple([self._layers[idx-1].size, layer.size]))
     
     def _init_bias(self, seed:int) -> None:
+        '''init bias based on seed, 1 per neuron. Shape is (size,)'''
         rng = np.random.default_rng(seed)
         for idx, layer in enumerate(self._layers):
             if idx == 0:
@@ -43,6 +45,7 @@ class MLPClassifier():
                         ((1 - y) * (np.log(1 - y_predict + epsilon)))))
     
     def _accuracy_score(self, y:np.ndarray, y_predict:np.ndarray):
+        '''calculate number of classification that's correct divide by length of sample'''
         for _, value in enumerate(y_predict):
             if value[0] < 0.5:
                 value[0] = 0
@@ -52,8 +55,7 @@ class MLPClassifier():
                 value[1] = 0
             else:
                 value[1] = 1
-        print(np.sum(y[:,0] == y_predict[:,0]) / len(y))
-        # print("y",y)
+        return np.sum(y[:,0] == y_predict[:,0]) / len(y)
 
     def _shuffle(self, y:np.ndarray, x:np.ndarray, seed:int) -> None:
         '''shuffle label and data in place according to seed'''
@@ -61,47 +63,64 @@ class MLPClassifier():
         indices = np.arange(len(y))
         rng.shuffle(indices)
         return (y[indices], x[indices])
-    
+ 
     def _sigmoid_derivative(self, y_predict:np.ndarray) -> np.ndarray:
+        '''sigmoid derivative'''
         return y_predict * (1 - y_predict)
 
     def _feedforward(self, x:np.ndarray) -> np.ndarray:
+        '''feedforward - used for prediction'''
         y_predict:np.ndarray = x
         for _, layer in enumerate(self._layers):
             layer.input_matrix = y_predict
             y_predict = layer.y_predict()
         return y_predict
-        
-    def _backpropagate(self, y_batch:np.ndarray, y_predict:np.ndarray, learning_rate:float) -> None:
+ 
+    def _backpropagate(self, y_batch:np.ndarray, y_predict:np.ndarray, learning_rate:float, _lambda:float) -> None:
+        '''backpropagation'''
         layer_error:np.ndarray = np.array([])
         for i in range(len(self._layers) - 1, -1 , -1):
             layer = self._layers[i]
             if i == len(self._layers) - 1:
+                # output layer gradient is (y_predict - y) * input
                 layer_error:np.ndarray = y_predict - y_batch
-                layer.weight -= layer.input_matrix.T.dot(layer_error) * learning_rate
+                # including term of weight decay (w * lambda/n) for L2 regularization to prevent overfitting
+                # Uncomment the following line to prove that regularization works vs normal GD
+                # layer.weight -= layer.input_matrix.T.dot(layer_error) * learning_rate
+                layer.weight -= (layer.input_matrix.T.dot(layer_error) + (layer.weight * _lambda / len(y_batch)))  * learning_rate 
                 layer.bias -= np.mean(layer_error, axis=0) * learning_rate
                 layer_error = layer_error.dot(layer.weight.T)
             elif 0 <  i < len(self._layers) - 1:
-                layer_error_delta:np.ndarray = (layer_error * self._sigmoid_derivative(layer.y_predict()))
-                layer.weight -= layer.input_matrix.T.dot(layer_error_delta) * learning_rate
+                # each hidden layer gradient is (error * sigmoid derivative) * input 
+                layer_error_delta:np.ndarray = (layer_error * \
+                                            self._sigmoid_derivative(layer.y_predict()))
+                # including term of weight decay (w * lambda/n) for L2 regularization to prevent overfitting
+                # Uncomment the following line to prove that regularization works vs normal GD
+                # layer.weight -= layer.input_matrix.T.dot(layer_error_delta) * learning_rate
+                layer.weight -= (layer.input_matrix.T.dot(layer_error_delta) + (layer.weight * _lambda / len(y_batch))) * learning_rate
                 layer.bias -= np.mean(layer_error_delta, axis=0) * learning_rate
                 layer_error = layer_error_delta.dot(layer.weight.T)
             else:
+                # no action for input layer
                 continue
-    
+ 
     @property
     def layers(self) -> np.ndarray:
         '''getter for layers'''
         return self._layers
-    
-
-    
-    def fit(self, x_train:np.ndarray, x_valid:np.ndarray, y_train:np.ndarray, y_valid:np.ndarray, seed:int=42, early_stopping=False, learning_rate:float=0.01, batch_size:int=30, epoch:int=10)->tuple[list,list]:
+ 
+    def fit(self, x_train:np.ndarray, x_valid:np.ndarray, y_train:np.ndarray, y_valid:np.ndarray, seed:int=42, _lambda:float=3, early_stopping=False, learning_rate:float=0.01, batch_size:int=30, epoch:int=10)->tuple[list,list]:
         '''train model based on hyperparams'''
         print(f"x_train shape : {x_train.shape}")
         print(f"x_valid shape : {x_valid.shape}")
         x_train = self._normalize(x_train)
         x_valid = self._normalize(x_valid)
+
+        loss_train:list = []
+        loss_valid:list = []
+        accuracy_train:list = []
+        accuracy_valid:list = []
+
         for i in range(epoch):
             # For each Epoch shuffle training set(validation set don't require shuffling)
             (y_shuffled, x_shuffled)=self._shuffle(y_train, x_train, seed)
@@ -112,14 +131,18 @@ class MLPClassifier():
                 x_batch:np.ndarray = x_shuffled[start_index:end_index]
                 y_batch:np.ndarray = y_shuffled[start_index:end_index]
                 y_predict:np.ndarray = self._feedforward(x_batch)
-                self._backpropagate(y_batch, y_predict, learning_rate)
+                self._backpropagate(y_batch, y_predict, learning_rate, _lambda)
                 start_index = end_index
                 end_index = start_index + batch_size
             y_predict_train = self._feedforward(x_train)
             y_predict_valid = self._feedforward(x_valid)
-            self._accuracy_score(y_train, y_predict_train)
-            print(f"epoch {i+1}/{epoch} - loss: {self._binary_cross_entropy_loss(y_train, y_predict_train)} \
- - val_loss: {self._binary_cross_entropy_loss(y_valid, y_predict_valid)}")
+            loss_train.append(self._binary_cross_entropy_loss(y_train, y_predict_train))
+            loss_valid.append(self._binary_cross_entropy_loss(y_valid, y_predict_valid))
+            accuracy_train.append(self._accuracy_score(y_train, y_predict_train))
+            accuracy_valid.append(self._accuracy_score(y_valid, y_predict_valid))
+            print(f"epoch {i+1}/{epoch} - loss: {loss_train[i]:.4f} \
+ - val_loss: {loss_valid[i]:.4f}")
+        return (loss_train, loss_valid, accuracy_train, accuracy_valid)
             
 
 
