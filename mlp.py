@@ -43,7 +43,17 @@ class MLPClassifier():
                         ((1 - y) * (np.log(1 - y_predict + epsilon)))))
     
     def _accuracy_score(self, y:np.ndarray, y_predict:np.ndarray):
-        pass
+        for _, value in enumerate(y_predict):
+            if value[0] < 0.5:
+                value[0] = 0
+            else:
+                value[0] = 1
+            if value[1] < 0.5:
+                value[1] = 0
+            else:
+                value[1] = 1
+        print(np.sum(y[:,0] == y_predict[:,0]) / len(y))
+        # print("y",y)
 
     def _shuffle(self, y:np.ndarray, x:np.ndarray, seed:int) -> None:
         '''shuffle label and data in place according to seed'''
@@ -63,18 +73,19 @@ class MLPClassifier():
         return y_predict
         
     def _backpropagate(self, y_batch:np.ndarray, y_predict:np.ndarray, learning_rate:float) -> None:
-        layer_error_delta:np.ndarray = np.array([])
+        layer_error:np.ndarray = np.array([])
         for i in range(len(self._layers) - 1, -1 , -1):
             layer = self._layers[i]
             if i == len(self._layers) - 1:
                 layer_error:np.ndarray = y_predict - y_batch
                 layer.weight -= layer.input_matrix.T.dot(layer_error) * learning_rate
                 layer.bias -= np.mean(layer_error, axis=0) * learning_rate
-                layer_error_delta = layer_error.dot(layer.weight.T)
+                layer_error = layer_error.dot(layer.weight.T)
             elif 0 <  i < len(self._layers) - 1:
+                layer_error_delta:np.ndarray = (layer_error * self._sigmoid_derivative(layer.y_predict()))
                 layer.weight -= layer.input_matrix.T.dot(layer_error_delta) * learning_rate
                 layer.bias -= np.mean(layer_error_delta, axis=0) * learning_rate
-                layer_error_delta = layer_error_delta.dot(layer.weight.T)
+                layer_error = layer_error_delta.dot(layer.weight.T)
             else:
                 continue
     
@@ -85,7 +96,7 @@ class MLPClassifier():
     
 
     
-    def fit(self, x_train:np.ndarray, x_valid:np.ndarray, y_train:np.ndarray, y_valid:np.ndarray, seed:int=42, early_stopping=False, learning_rate:float=0.01, batch_size:int=50, epoch:int=1)->tuple[list,list]:
+    def fit(self, x_train:np.ndarray, x_valid:np.ndarray, y_train:np.ndarray, y_valid:np.ndarray, seed:int=42, early_stopping=False, learning_rate:float=0.01, batch_size:int=30, epoch:int=10)->tuple[list,list]:
         '''train model based on hyperparams'''
         print(f"x_train shape : {x_train.shape}")
         print(f"x_valid shape : {x_valid.shape}")
@@ -108,7 +119,7 @@ class MLPClassifier():
             y_predict_valid = self._feedforward(x_valid)
             self._accuracy_score(y_train, y_predict_train)
             print(f"epoch {i+1}/{epoch} - loss: {self._binary_cross_entropy_loss(y_train, y_predict_train)} \
-                  - val_loss: {self._binary_cross_entropy_loss(y_valid, y_predict_valid)}")
+ - val_loss: {self._binary_cross_entropy_loss(y_valid, y_predict_valid)}")
             
 
 
