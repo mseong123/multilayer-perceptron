@@ -10,15 +10,17 @@ class MLPClassifier():
             self._layers:list = layers
             self._init_weight(seed)
             self._init_bias(seed)
-            # early stop parameters
-            self._tol:float = 1e-4
-            self._n_epoch_no_change:int = 5
-            self._early_stop_count:int = 0
-            # adam optimiser parameters
-            self._beta1:float = 0.9
-            self._beta2:float = 1 - self._beta1
-            self._m:float = 0
-            self._v:float = 0 
+        # early stop parameters
+        self._tol:float = 1e-4
+        self._n_epoch_no_change:int = 5
+        self._early_stop_count:int = 0
+        # adam optimiser parameters
+        self._beta1:float = 0.9
+        self._beta2:float = 0.9999
+        self._m_weight_array:list = [0] * len(self._layers)
+        self._v_weight_array:list = [0] * len(self._layers)
+        self._m_bias_array:list = [0] * len(self._layers)
+        self._v_bias_array:list = [0] * len(self._layers)
 
     def _init_weight(self, seed:int) -> None:
         ''' init weight based on seed, shape is (input_size, size)'''
@@ -49,9 +51,6 @@ class MLPClassifier():
         '''calculate and return loss value'''
         epsilon = 1e-10
         # total weight in network
-        w:float = 0
-        for layer in self.layers:
-            w += np.sum(layer.weight)
         # shape is (size of sample,). Add epsilon to prevent log(0) which is undefined
         return np.mean(-((y * np.log(y_predict + epsilon)) + ((1 - y) * (np.log(1 - y_predict + epsilon)))))
     
@@ -95,9 +94,8 @@ class MLPClassifier():
             if i == len(self._layers) - 1:
                 # output layer gradient is (y_predict - y) * input
                 layer_error:np.ndarray = y_predict - y_batch
-                # including term of weight decay (w * lambda/n) for L2 regularization to prevent overfitting
-                # Uncomment the following line to prove that regularization works vs normal GD
                 if L2regularization is True:
+                # including term of weight decay (w * lambda/n) for L2 regularization to prevent overfitting
                     layer.weight -= (layer.input_matrix.T.dot(layer_error) + (layer.weight * _lambda / len(y_batch)))  * learning_rate
                 else:
                     layer.weight -= layer.input_matrix.T.dot(layer_error) * learning_rate
@@ -105,10 +103,9 @@ class MLPClassifier():
                 layer_error = layer_error.dot(layer.weight.T)
             elif 0 <  i < len(self._layers) - 1:
                 # each hidden layer gradient is (error * sigmoid derivative) * input 
-                layer_error_delta:np.ndarray = (layer_error * \
-                                            self._sigmoid_derivative(layer.y_predict()))
-                # including term of weight decay (w * lambda/n) for L2 regularization to prevent overfitting
+                layer_error_delta:np.ndarray = (layer_error * self._sigmoid_derivative(layer.y_predict()))
                 if L2regularization is True:
+                # including term of weight decay (w * lambda/n) for L2 regularization to prevent overfitting
                     layer.weight -= (layer.input_matrix.T.dot(layer_error_delta) + (layer.weight * _lambda / len(y_batch))) * learning_rate
                 else:
                     layer.weight -= layer.input_matrix.T.dot(layer_error_delta) * learning_rate
@@ -117,7 +114,63 @@ class MLPClassifier():
             else:
                 # no action for input layer
                 continue
-    
+
+    def _adam_adjustment(self, gradient:np.ndarray, bias:np.ndarray, iteration:int, i:int)->tuple:
+            '''adam adjustments'''
+            if iteration == 1:
+                # at first iteration make all numpy same shape
+                self._m_weight_array[i] = np.zeros(gradient.shape)
+                self._v_weight_array[i] = np.zeros(gradient.shape)
+                self._m_bias_array[i] = np.zeros(bias.shape)
+                self._v_bias_array[i] = np.zeros(bias.shape)
+            # Weights
+            self._m_weight_array[i] = (self._beta1 * self._m_weight_array[i]) + ((1 - self._beta1) * gradient)
+            self._v_weight_array[i] = (self._beta2 * self._v_weight_array[i]) + ((1 - self._beta2) * (gradient **2))
+            adjusted_m_weight = self._m_weight_array[i] / (1 - (self._beta1 ** iteration))
+            adjusted_v_weight = self._v_weight_array[i] / (1 - (self._beta2 ** iteration))
+            # Bias
+            self._m_bias_array[i] = (self._beta1 * self._m_bias_array[i]) + ((1 - self._beta1) * bias)
+            self._v_bias_array[i] = (self._beta2 * self._v_bias_array[i]) + ((1 - self._beta2) * (bias **2))
+            adjusted_m_bias = self._m_bias_array[i] / (1 - (self._beta1 ** iteration))
+            adjusted_v_bias = self._v_bias_array[i] / (1 - (self._beta2 ** iteration))
+            return (adjusted_m_weight, adjusted_v_weight, adjusted_m_bias, adjusted_v_bias)
+                
+
+
+    def _backpropagate_adam(self, y_batch:np.ndarray, y_predict:np.ndarray, learning_rate:float, _lambda:float, L2regularization:bool, iteration:int) -> None:
+        '''backpropagation for adam'''
+        layer_error:np.ndarray = np.array([])
+        epsilon = 1e-10
+        for i in range(len(self._layers) - 1, -1 , -1):
+            layer = self._layers[i]
+            if i == len(self._layers) - 1:
+                # output layer gradient is (y_predict - y) * input
+                layer_error:np.ndarray = y_predict - y_batch
+                # Calculate gradients
+                if L2regularization is True:
+                    gradient:np.ndarray = layer.input_matrix.T.dot(layer_error) + (layer.weight * _lambda / len(y_batch))
+                else:
+                    gradient:np.ndarray = layer.input_matrix.T.dot(layer_error)
+                bias:np.ndarray = np.mean(layer_error, axis=0)
+                adjusted_m_weight, adjusted_v_weight, adjusted_m_bias, adjusted_v_bias = self._adam_adjustment(gradient, bias, iteration, i)
+                layer.weight -= (adjusted_m_weight / (np.sqrt(adjusted_v_weight) + epsilon)) * learning_rate
+                layer.bias -=  (adjusted_m_bias / (np.sqrt(adjusted_v_bias) + epsilon)) * learning_rate
+                layer_error = layer_error.dot(layer.weight.T)
+            elif 0 <  i < len(self._layers) - 1:
+                # each hidden layer gradient is (error * sigmoid derivative) * input 
+                layer_error_delta:np.ndarray = (layer_error * self._sigmoid_derivative(layer.y_predict()))
+                if L2regularization is True:
+                    gradient:np.ndarray = layer.input_matrix.T.dot(layer_error_delta) + (layer.weight * _lambda / len(y_batch))
+                else:
+                    gradient:np.ndarray = layer.input_matrix.T.dot(layer_error_delta)
+                bias:np.ndarray = np.mean(layer_error_delta, axis=0)
+                adjusted_m_weight, adjusted_v_weight, adjusted_m_bias, adjusted_v_bias = self._adam_adjustment(gradient, bias, iteration, i)
+                layer.weight -= (adjusted_m_weight / (np.sqrt(adjusted_v_weight) + epsilon)) * learning_rate
+                layer.bias -=  (adjusted_m_bias / (np.sqrt(adjusted_v_bias) + epsilon)) * learning_rate
+                layer_error = layer_error_delta.dot(layer.weight.T)
+            else:
+                # no action for input layer
+                continue
     
     def _check_early_stopping(self, loss_valid:list, i:int) -> bool:
         '''If validation loss is not improving by tol for no. of epochs consecutively, return false'''
@@ -150,23 +203,19 @@ class MLPClassifier():
         return (loss_valid, accuracy_valid, error_valid)
 
  
-    def fit(self, x_train:np.ndarray, x_valid:np.ndarray, y_train:np.ndarray, y_valid:np.ndarray, seed:int=42, _lambda:float=3, L2regularization=False, early_stopping=False, learning_rate:float=0.01, batch_size:int=30, epoch:int=10)->tuple[list,list]:
+    def fit(self, x_train:np.ndarray, x_valid:np.ndarray, y_train:np.ndarray, y_valid:np.ndarray, seed:int=42, optimizer=None, _lambda:float=3, L2regularization=False, early_stopping=False, learning_rate:float=0.01, batch_size:int=30, epoch:int=10)->tuple[list,list]:
         '''train model based on hyperparams'''
         print(f"x_train shape : {x_train.shape}")
         print(f"x_valid shape : {x_valid.shape}")
         x_train = self._normalize(x_train)
         x_valid = self._normalize(x_valid)
-
+        count:int = 0
 
         # metrics to return
         loss_train:list = []
         loss_valid:list = []
         accuracy_train:list = []
         accuracy_valid:list = []
-
-        # Adam optimiser params
-        beta1:float = 0.9
-        beta2:float = 1 - beta1
 
         for i in range(epoch):
             # For each Epoch shuffle training set(validation set don't require shuffling)
@@ -178,9 +227,13 @@ class MLPClassifier():
                 x_batch:np.ndarray = x_shuffled[start_index:end_index]
                 y_batch:np.ndarray = y_shuffled[start_index:end_index]
                 y_predict:np.ndarray = self._feedforward(x_batch)
-                self._backpropagate(y_batch, y_predict, learning_rate, _lambda, L2regularization)
+                if optimizer == "adam":
+                    self._backpropagate_adam(y_batch, y_predict, learning_rate, _lambda, L2regularization, count + 1)
+                else:
+                    self._backpropagate(y_batch, y_predict, learning_rate, _lambda, L2regularization)
                 start_index = end_index
                 end_index = start_index + batch_size
+                count += 1
             y_predict_train = self._feedforward(x_train)
             y_predict_valid = self._feedforward(x_valid)
             loss_train.append(self._binary_cross_entropy_loss(y_train, y_predict_train))

@@ -35,7 +35,5 @@ def main()->None:
     print(f"Accuracy of prediction = {accuracy:.2f}")
     print(f"Error of prediction = {error:.2f}")
 
-     
-
 if __name__ == "__main__":
     main()
