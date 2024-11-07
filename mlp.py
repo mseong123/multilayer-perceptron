@@ -78,7 +78,7 @@ class MLPClassifier():
             y_predict = layer.y_predict()
         return y_predict
  
-    def _backpropagate(self, y_batch:np.ndarray, y_predict:np.ndarray, learning_rate:float, _lambda:float) -> None:
+    def _backpropagate(self, y_batch:np.ndarray, y_predict:np.ndarray, learning_rate:float, _lambda:float, regularization:bool) -> None:
         '''backpropagation'''
         layer_error:np.ndarray = np.array([])
         for i in range(len(self._layers) - 1, -1 , -1):
@@ -88,8 +88,10 @@ class MLPClassifier():
                 layer_error:np.ndarray = y_predict - y_batch
                 # including term of weight decay (w * lambda/n) for L2 regularization to prevent overfitting
                 # Uncomment the following line to prove that regularization works vs normal GD
-                # layer.weight -= layer.input_matrix.T.dot(layer_error) * learning_rate
-                layer.weight -= (layer.input_matrix.T.dot(layer_error) + (layer.weight * _lambda / len(y_batch)))  * learning_rate 
+                if regularization is True:
+                    layer.weight -= (layer.input_matrix.T.dot(layer_error) + (layer.weight * _lambda / len(y_batch)))  * learning_rate
+                else:
+                    layer.weight -= layer.input_matrix.T.dot(layer_error) * learning_rate
                 layer.bias -= np.mean(layer_error, axis=0) * learning_rate
                 layer_error = layer_error.dot(layer.weight.T)
             elif 0 <  i < len(self._layers) - 1:
@@ -97,9 +99,10 @@ class MLPClassifier():
                 layer_error_delta:np.ndarray = (layer_error * \
                                             self._sigmoid_derivative(layer.y_predict()))
                 # including term of weight decay (w * lambda/n) for L2 regularization to prevent overfitting
-                # Uncomment the following line to prove that regularization works vs normal GD
-                # layer.weight -= layer.input_matrix.T.dot(layer_error_delta) * learning_rate
-                layer.weight -= (layer.input_matrix.T.dot(layer_error_delta) + (layer.weight * _lambda / len(y_batch))) * learning_rate
+                if regularization is True:
+                    layer.weight -= (layer.input_matrix.T.dot(layer_error_delta) + (layer.weight * _lambda / len(y_batch))) * learning_rate
+                else:
+                    layer.weight -= layer.input_matrix.T.dot(layer_error_delta) * learning_rate
                 layer.bias -= np.mean(layer_error_delta, axis=0) * learning_rate
                 layer_error = layer_error_delta.dot(layer.weight.T)
             else:
@@ -125,7 +128,7 @@ class MLPClassifier():
         return (loss_valid, accuracy_valid, error_valid)
 
  
-    def fit(self, x_train:np.ndarray, x_valid:np.ndarray, y_train:np.ndarray, y_valid:np.ndarray, seed:int=42, _lambda:float=3, early_stopping=False, learning_rate:float=0.01, batch_size:int=30, epoch:int=10)->tuple[list,list]:
+    def fit(self, x_train:np.ndarray, x_valid:np.ndarray, y_train:np.ndarray, y_valid:np.ndarray, seed:int=42, _lambda:float=3, regularization=False, early_stopping=False, learning_rate:float=0.01, batch_size:int=30, epoch:int=10)->tuple[list,list]:
         '''train model based on hyperparams'''
         print(f"x_train shape : {x_train.shape}")
         print(f"x_valid shape : {x_valid.shape}")
@@ -147,7 +150,7 @@ class MLPClassifier():
                 x_batch:np.ndarray = x_shuffled[start_index:end_index]
                 y_batch:np.ndarray = y_shuffled[start_index:end_index]
                 y_predict:np.ndarray = self._feedforward(x_batch)
-                self._backpropagate(y_batch, y_predict, learning_rate, _lambda)
+                self._backpropagate(y_batch, y_predict, learning_rate, _lambda, regularization)
                 start_index = end_index
                 end_index = start_index + batch_size
             y_predict_train = self._feedforward(x_train)
