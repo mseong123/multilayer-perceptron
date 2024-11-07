@@ -78,7 +78,7 @@ class MLPClassifier():
             y_predict = layer.y_predict()
         return y_predict
  
-    def _backpropagate(self, y_batch:np.ndarray, y_predict:np.ndarray, learning_rate:float, _lambda:float, regularization:bool) -> None:
+    def _backpropagate(self, y_batch:np.ndarray, y_predict:np.ndarray, learning_rate:float, _lambda:float, L2regularization:bool) -> None:
         '''backpropagation'''
         layer_error:np.ndarray = np.array([])
         for i in range(len(self._layers) - 1, -1 , -1):
@@ -88,7 +88,7 @@ class MLPClassifier():
                 layer_error:np.ndarray = y_predict - y_batch
                 # including term of weight decay (w * lambda/n) for L2 regularization to prevent overfitting
                 # Uncomment the following line to prove that regularization works vs normal GD
-                if regularization is True:
+                if L2regularization is True:
                     layer.weight -= (layer.input_matrix.T.dot(layer_error) + (layer.weight * _lambda / len(y_batch)))  * learning_rate
                 else:
                     layer.weight -= layer.input_matrix.T.dot(layer_error) * learning_rate
@@ -99,7 +99,7 @@ class MLPClassifier():
                 layer_error_delta:np.ndarray = (layer_error * \
                                             self._sigmoid_derivative(layer.y_predict()))
                 # including term of weight decay (w * lambda/n) for L2 regularization to prevent overfitting
-                if regularization is True:
+                if L2regularization is True:
                     layer.weight -= (layer.input_matrix.T.dot(layer_error_delta) + (layer.weight * _lambda / len(y_batch))) * learning_rate
                 else:
                     layer.weight -= layer.input_matrix.T.dot(layer_error_delta) * learning_rate
@@ -128,17 +128,24 @@ class MLPClassifier():
         return (loss_valid, accuracy_valid, error_valid)
 
  
-    def fit(self, x_train:np.ndarray, x_valid:np.ndarray, y_train:np.ndarray, y_valid:np.ndarray, seed:int=42, _lambda:float=3, regularization=False, early_stopping=False, learning_rate:float=0.01, batch_size:int=30, epoch:int=10)->tuple[list,list]:
+    def fit(self, x_train:np.ndarray, x_valid:np.ndarray, y_train:np.ndarray, y_valid:np.ndarray, seed:int=42, _lambda:float=3, L2regularization=False, early_stopping=False, learning_rate:float=0.01, batch_size:int=30, epoch:int=10)->tuple[list,list]:
         '''train model based on hyperparams'''
         print(f"x_train shape : {x_train.shape}")
         print(f"x_valid shape : {x_valid.shape}")
         x_train = self._normalize(x_train)
         x_valid = self._normalize(x_valid)
 
+
+        # metrics to return
         loss_train:list = []
         loss_valid:list = []
         accuracy_train:list = []
         accuracy_valid:list = []
+
+        # parameters for early stopping, if validation loss is not improving by tol for no. of epochs consecutively
+        tol:float = 1e-4
+        n_epoch_no_change:int = 5
+        count:int = 0
 
         for i in range(epoch):
             # For each Epoch shuffle training set(validation set don't require shuffling)
@@ -150,15 +157,23 @@ class MLPClassifier():
                 x_batch:np.ndarray = x_shuffled[start_index:end_index]
                 y_batch:np.ndarray = y_shuffled[start_index:end_index]
                 y_predict:np.ndarray = self._feedforward(x_batch)
-                self._backpropagate(y_batch, y_predict, learning_rate, _lambda, regularization)
+                self._backpropagate(y_batch, y_predict, learning_rate, _lambda, L2regularization)
                 start_index = end_index
                 end_index = start_index + batch_size
             y_predict_train = self._feedforward(x_train)
             y_predict_valid = self._feedforward(x_valid)
             loss_train.append(self._binary_cross_entropy_loss(y_train, y_predict_train))
-            loss_valid.append(self._binary_cross_entropy_loss(y_valid, y_predict_valid))
+            loss_valid_epoch = self._binary_cross_entropy_loss(y_valid, y_predict_valid)
+            loss_valid.append(loss_valid_epoch)
             accuracy_train.append(self._accuracy_score(y_train, y_predict_train))
             accuracy_valid.append(self._accuracy_score(y_valid, y_predict_valid))
+            if early_stopping is True:
+                if i > 0 and (loss_valid[i - 1] - loss_valid[i]) < tol:
+                    count += 1   
+                if i > 0 and (loss_valid[i - 1] - loss_valid[i]) > tol:
+                    count = 0
+                if count == n_epoch_no_change:
+                    break
             print(f"epoch {i+1}/{epoch} - loss: {loss_train[i]:.4f} \
  - val_loss: {loss_valid[i]:.4f}")
         return (loss_train, loss_valid, accuracy_train, accuracy_valid)

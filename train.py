@@ -42,7 +42,7 @@ def main()->None:
     y_train, y_valid, df_train, df_valid = preprocess(df_train, df_valid)
     # initialise model, first layer based on features in dataset
     model:mlp.MLPClassifier = mlp.MLPClassifier([layers.DenseLayer(size=len(df_train.columns)),layers.DenseLayer(size=20, activation="sigmoid"),layers.DenseLayer(size=10, activation="sigmoid"),layers.DenseLayer(size=2, activation="softmax")])
-    loss_train, loss_valid, accuracy_train, accuracy_valid = model.fit(df_train.values, df_valid.values, y_train, y_valid, batch_size=16, epoch=30, _lambda=3, regularization=True)
+    loss_train, loss_valid, accuracy_train, accuracy_valid = model.fit(df_train.values, df_valid.values, y_train, y_valid, batch_size=16, epoch=100, _lambda=3, L2regularization=True, early_stopping=True)
     plot_metrics(loss_train, loss_valid, accuracy_train, accuracy_valid)
     print("saving model './layer.npz' to disk...")
     np.savez("layer.npz", layers=model.layers)
