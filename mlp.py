@@ -5,11 +5,20 @@ class MLPClassifier():
     '''Based on Tensorflow Sequential model'''
     def __init__ (self, layers=None, seed:int=42):
         if layers is None:
-            self._layers = []
+            self._layers:list = []
         else:
-            self._layers=layers
+            self._layers:list = layers
             self._init_weight(seed)
             self._init_bias(seed)
+            # early stop parameters
+            self._tol:float = 1e-4
+            self._n_epoch_no_change:int = 5
+            self._early_stop_count:int = 0
+            # adam optimiser parameters
+            self._beta1:float = 0.9
+            self._beta2:float = 1 - self._beta1
+            self._m:float = 0
+            self._v:float = 0 
 
     def _init_weight(self, seed:int) -> None:
         ''' init weight based on seed, shape is (input_size, size)'''
@@ -108,6 +117,18 @@ class MLPClassifier():
             else:
                 # no action for input layer
                 continue
+    
+    
+    def _check_early_stopping(self, loss_valid:list, i:int) -> bool:
+        '''If validation loss is not improving by tol for no. of epochs consecutively, return false'''
+        stop:bool = False
+        if i > 0 and (loss_valid[i - 1] - loss_valid[i]) < self._tol:
+            self._early_stop_count += 1
+        if i > 0 and (loss_valid[i - 1] - loss_valid[i]) > self._tol:
+            self._early_stop_count = 0
+        if self._early_stop_count >= self._n_epoch_no_change:
+            stop = True
+        return stop
  
     @property
     def layers(self) -> np.ndarray:
@@ -120,6 +141,7 @@ class MLPClassifier():
         self._layers = layers
 
     def predict(self, y_valid:np.ndarray, x_valid:np.ndarray) -> tuple:
+        '''return model metrics'''
         x_valid = self._normalize(x_valid)
         y_predict_valid = self._feedforward(x_valid)
         loss_valid:np.float64 = self._binary_cross_entropy_loss(y_valid, y_predict_valid)
@@ -142,10 +164,9 @@ class MLPClassifier():
         accuracy_train:list = []
         accuracy_valid:list = []
 
-        # parameters for early stopping, if validation loss is not improving by tol for no. of epochs consecutively
-        tol:float = 1e-4
-        n_epoch_no_change:int = 5
-        count:int = 0
+        # Adam optimiser params
+        beta1:float = 0.9
+        beta2:float = 1 - beta1
 
         for i in range(epoch):
             # For each Epoch shuffle training set(validation set don't require shuffling)
@@ -167,13 +188,11 @@ class MLPClassifier():
             loss_valid.append(loss_valid_epoch)
             accuracy_train.append(self._accuracy_score(y_train, y_predict_train))
             accuracy_valid.append(self._accuracy_score(y_valid, y_predict_valid))
+            # Early stopping
             if early_stopping is True:
-                if i > 0 and (loss_valid[i - 1] - loss_valid[i]) < tol:
-                    count += 1   
-                if i > 0 and (loss_valid[i - 1] - loss_valid[i]) > tol:
-                    count = 0
-                if count == n_epoch_no_change:
-                    break
+                result:bool = self._check_early_stopping(loss_valid, i)
+                if result is True:
+                    break 
             print(f"epoch {i+1}/{epoch} - loss: {loss_train[i]:.4f} \
  - val_loss: {loss_valid[i]:.4f}")
         return (loss_train, loss_valid, accuracy_train, accuracy_valid)
