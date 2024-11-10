@@ -51,24 +51,18 @@ python predict.py data_test.csv layer.npz
 ```
 This will load the network topology along with weights and biases (result from previous training and show the accuracy score using `data_test.csv`.
 
-### To evaluate model
+### To further evaluate model (amend train.py file in the below lines)
+Adding and removing layers (line 44), set the size of neuron of each layer along with their activation function.
 ```
-python evaluate.py
+model:mlp.MLPClassifier = mlp.MLPClassifier([layers.DenseLayer(size=len(df_train.columns)),layers.DenseLayer(size=20, activation="sigmoid"),layers.DenseLayer(size=10, activation="sigmoid"),layers.DenseLayer(size=2, activation="softmax")])
 ```
-This will evaluate the labels generated in `houses.csv` against `dataset_truth.csv` using Scikit-learn accuracy_score method to evaluate precision of model (99%)
-
-## To run BONUS
-
-### To train model using SGD
+Configuring hyperparameters (line 45)
+- batch sizes
+- epochs
+- _lambda value and L2regularization(set to True or False)
+- early stopping
+- optimizer(set to "adam" or None)
 ```
-python logreg_train.py dataset_train.csv SGD
+loss_train, loss_valid, accuracy_train, accuracy_valid = model.fit(df_train.values, df_valid.values, y_train, y_valid, batch_size=16, epoch=10, _lambda=3, L2regularization=False, early_stopping=True, optimizer="adam")
 ```
-To train model using stochastic gradient descent. Hyperparamater (epoch) can be adjusted.
-
-### To train model using mini_batch
-```
-python logreg_train.py dataset_train.csv mini_batch
-```
-To train model using stochastic gradient descent. Hyperparamater (epoch and batch_size) can be adjusted.
-Both models above can be evaluated using mandatory functions as shown above. Precision rate is 99% for both optimization methods.
 
