@@ -5,7 +5,7 @@ This project's objective is to obtain a deep understanding of how neural network
 This project also aims to familiarize with the hyperparameters used, their nuances and impact on the model from both theoretical and heuristic approaches. One of the main uses of Neural Network vs other ML models is the ability to model non-linearly separable data and very complex relationships in the dataset.
 
 Included in mandatory part:
- - splitting of dataset into training and validation
+ - splitting of main dataset into training and validation segment with random seed shuffling and stratification to avoid class bias
  - forward feed and error backpropagation between the layers
  - code the class in a modular way to resemble Tensorflow Keras sequential NN model with Layer class and weight/bias encapsulation
  - sigmoid activation function in hidden layers and softmax in output layer
@@ -20,22 +20,10 @@ Included in bonus part:
 Highly recommended reading: [Neural Networks and Deep Learning from Michael Nielsen](http://neuralnetworksanddeeplearning.com/index.html) which provides a comprehensive view of subject matter and distill the 
 various technical concepts down to an intuitive and illustrative manner.
 
+The model achieved accuracy of 94% to 97% in the randomised generated validation sets. 
+Final results **120/100**
 
-Included in mandatory part:
- - Z score normalization of dataset
- - coding implementation of data science and statistical concepts
- - data cleaning (how to deal with missing data)
- - data visualisation (to check for collinearity between features using histogram, scatterplot and scatterplot matrix)
- - backpropagation of loss values to respective weights and biases using gradient descent
-
-Included in BONUS part:
- - implementation of stochastic gradient descent
- - implementation of mini-batch gradient descent
-
-The model achieved accuracy of 99% in all scenarios using test data as per Scikit-learn.metrics accuracy score. The classes and functions are coded using reference to Scikit-learn LogisticRegression class. 
-Final results **125/100**
-
-See [`Subject PDF`](https://github.com/mseong123/dslr/blob/main/en.subject.pdf) link.
+See [`Subject PDF`](https://github.com/mseong123/multilayer-perceptron/blob/main/en.subject.pdf) link.
 
 ## To install dependencies
 ```
@@ -44,18 +32,24 @@ pip install -r requirements.txt
 
 ## To run MANDATORY
 
+### To split dataset
+```
+python split.py data.csv 42
+```
+This will split dataset into train.csv and test.csv using a 80/20 ratio and the samples will be stratified using the ratio of the classes. Use a seed parameter for reproducible results - default is 42 if parameter is not included.
+
 ### To train model
 ```
-python logreg_train.py dataset_train.csv
+python train.py data_train.csv data_test.csv
 ```
-This will train the regression model based on the `dataset_train.csv` and will show loss function value at every 100 iterations. Adjust hyperparameters learning rate and iteration in logreg_train.py to tune model's
-performance. The above will output file `weight.npz` which will be used by model to predict classification output based on test dataset.
+This will initialize the model with random weights and biases based on Gaussian normal distribution. The model will be trained using `data_train.csv` and validated at every epoch with `data_test.csv`.
+History of loss and accuracy metrics will be shown in graphs at the end of training. Network topology along with weights and biases are saved in `layer.npz`.
 
-### To predict model
+### To load and predict model
 ```
-python logreg_predict.py dataset_test.csv weight.npz
+python predict.py data_test.csv layer.npz
 ```
-This will output a file `houses.csv` which shows labelling of the classes in the test dataset. 
+This will load the network topology along with weights and biases (result from previous training and show the accuracy score using `data_test.csv`.
 
 ### To evaluate model
 ```
