@@ -1,14 +1,25 @@
 # multilayer-perceptron | 42KL
 
-This project is to obtain a deep understanding of how neural network and deep learning works in modern Machine Learning domain. We have to design and train a neural network with 2 hidden layers to classify
-if a tumor is benign or malignant using a well known [`dataset`](https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic) of breast cancer from Wisconsin. This project is coded from
-scratch using Python, Numpy, Matplotlib and Pandas without any external ML libraries. 
+This project's objective is to obtain a deep understanding of how neural network and deep learning works in the modern Machine Learning domain. We have to design and train a neural network with a minimum of 2 hidden layers to classify if a tumor is benign or malignant using a well known [`dataset`](https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic) of breast cancer from Wisconsin. This project is coded from scratch using Python, Numpy, Matplotlib and Pandas without any external ML libraries. 
+
+This project also aims to familiarize with the hyperparameters used, their nuances and impact on the model from both theoretical and heuristic approaches. One of the main uses of Neural Network vs other ML models is the ability to model non-linearly separable data and very complex relationships in the dataset.
+
+Included in mandatory part:
+ - splitting of dataset into training and validation
+ - forward feed and error backpropagation between the layers
+ - code the class in a modular way to resemble Tensorflow Keras sequential NN model with Layer class and weight/bias encapsulation
+ - sigmoid activation function in hidden layers and softmax in output layer
+ - Binary Cross Entropy function as loss value
+ - Using metrics with graph visualisation to gauge model performance during training and post training.
+
+Included in bonus part:
+ - L2 regularization to avoid overfitting
+ - early stopping
+ - Adam gradient descent optimizer
 
 Highly recommended reading: [Neural Networks and Deep Learning from Michael Nielsen](http://neuralnetworksanddeeplearning.com/index.html) which provides a comprehensive view of subject matter and distill the 
 various technical concepts down to an intuitive and illustrative manner.
 
-
-Logistic Regression is a supervised learning and is used to classify data into separate classes based on features. This project incorporates element of sigmoid function, binary cross entropy function as a loss function and used gradient descent as optimization algorithm. 
 
 Included in mandatory part:
  - Z score normalization of dataset
