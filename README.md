@@ -2,7 +2,7 @@
 
 This project's objective is to obtain a deep understanding of how neural network and deep learning works in the modern Machine Learning domain. We have to design and train a neural network with a minimum of 2 hidden layers to classify if a tumor is benign or malignant using a well known [`dataset`](https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic) of breast cancer from Wisconsin. This project is coded from scratch using Python, Numpy, Matplotlib and Pandas without any external ML libraries. 
 
-This project also aims to familiarize with the hyperparameters used, their nuances and impact on the model from both theoretical and heuristic approaches. One of the main uses of Neural Network vs other ML models is the ability to model non-linearly separable data and very complex relationships in the dataset.
+This project also aims to familiarize with the hyperparameters used, their nuances and impact on the model metrics from both theoretical and heuristic approaches. One of the main uses of Neural Network vs other ML models is the ability to model non-linearly separable data and very complex relationships in the dataset.
 
 Included in mandatory part:
  - splitting of main dataset into training and validation segment with random seed shuffling and stratification to avoid class bias
