@@ -2,7 +2,7 @@
 
 ![Neural Network](https://github.com/mseong123/multilayer-perceptron/blob/main/NN.png)
 
-Figure 1: Illustration of input layer, hidden layer and output layer in a typical neural network.
+*Figure 1: Illustration of input layer, hidden layer and output layer in a typical neural network.*
 
 This project's objective is to obtain a deep understanding of how neural network and deep learning works in the modern Machine Learning domain. We have to design and train a neural network with a minimum of 2 hidden layers to classify if a tumor is benign or malignant using a well known [`dataset`](https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic) of breast cancer from Wisconsin. This project is coded from scratch using Python, Numpy, Matplotlib and Pandas without any external ML libraries. 
 
